@@ -18,6 +18,19 @@
 # tidily and carries exactly the same value.
 function _simplify_for_report(expr)
     try
+        if isdefined(Symbolics, :VariableDomain)
+            is_positive(v) = Symbolics.hasmetadata(Symbolics.unwrap(v), getfield(Symbolics, :VariableDomain))
+            
+            # Étape 1 : Réduction sûre vers la valeur absolue
+            rule_sqrt = Symbolics.SymbolicUtils.@rule sqrt((~x)^2) => abs(~x)
+            rule_pow  = Symbolics.SymbolicUtils.@rule ((~x)^2)^(1//2) => abs(~x)
+            
+            # Étape 2 : Élimination conditionnelle de la valeur absolue
+            rule_abs  = Symbolics.SymbolicUtils.@rule abs(~x) => is_positive(~x) ? ~x : abs(~x)
+            
+            expr = Symbolics.wrap(Symbolics.SymbolicUtils.Postwalk(Symbolics.SymbolicUtils.Chain([rule_sqrt, rule_pow, rule_abs]))(Symbolics.unwrap(expr)))
+        end
+
         return Symbolics.simplify(expr)
     catch err
         err isa InterruptException && rethrow()

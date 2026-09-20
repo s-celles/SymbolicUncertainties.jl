@@ -8,6 +8,10 @@ to [Semantic Versioning 2.0.0](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `.github/dependabot.yml`: the GitHub Actions used by CI, the
+  documentation build and TagBot are now kept current by Dependabot,
+  grouped into one weekly pull request. Julia `[compat]` bounds stay
+  with CompatHelper — Dependabot has no Julia ecosystem.
 - **CausalGraphs.jl Integration**: `SymbolicUncertaintiesCausalGraphsExt` weak dependency extension providing `parse_measurement_model` (Scaffolding Mode) and `evaluate_measurement_model` (Full-Auto Mode) for generating uncertainty budgets directly from causal graphs/Ishikawa diagrams.
 
 ### Fixed — the published documentation renders its formulas as mathematics

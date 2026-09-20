@@ -17,6 +17,134 @@ top.
 
 ---
 
+## UB-010 — `mermaid` 11.17 registers itself with RequireJS and no diagram renders on a Documenter site
+
+- **Discovered in**: 2026-09-20, while auditing the published
+  documentation for unrendered markup. The Ishikawa diagram on the
+  [Causal Graphs](https://s-celles.github.io/SymbolicUncertainties.jl/dev/causal-graphs/)
+  page was displayed as its own `graph LR ...` source text.
+- **Status**: **open — worked around locally**. Not yet filed;
+  the report belongs to
+  [DocumenterMermaid.jl](https://github.com/JuliaDocs/DocumenterMermaid.jl)
+  (which pins the floating `mermaid@11` tag) and to
+  [mermaid](https://github.com/mermaid-js/mermaid) (which shipped the
+  regression).
+
+### Symptoms
+
+Every fenced `mermaid` block renders as raw text, with one console
+error:
+
+```
+Uncaught TypeError: Se.default.extend is not a function
+  https://cdn.jsdelivr.net/npm/mermaid@11/dist/chunks/mermaid.esm.min/chunk-DZP67EKU.mjs
+```
+
+### Cause
+
+Mermaid 11.17 inlines `fastdom`, whose UMD wrapper ends with
+
+```js
+typeof define == "function" ? define(function () { return c })
+                            : typeof H == "object" && (H.exports = c)
+```
+
+The check is on `define` alone, not on `define.amd`. Documenter's HTML
+output always loads RequireJS (it is the `data-main` loader for
+`assets/documenter.js`), so a global `define` exists, `fastdom` hands
+itself to the module loader instead of to the bundle that imported it,
+and mermaid's own import of it comes back without `.extend`.
+
+The two defects compose: mermaid ships a bundle that misbehaves under
+any AMD loader, and `DocumenterMermaid` requests the floating
+`mermaid@11` tag, so sites that had working diagrams broke without any
+change on their side when 11.17.0 was published.
+
+### Version bisection
+
+Reproduced in headless Chromium with nothing but `require.js` and one
+`<div class="mermaid">` on the page:
+
+| mermaid | diagram renders |
+| --- | --- |
+| 11.12.0, 11.13.0, 11.15.0, 11.16.0 | yes |
+| 11.17.0, 11.17.1, 11.17.2 (= `@11` today) | **no** |
+| 12.0.0 | yes |
+
+Without RequireJS on the page, every version above renders — the
+conflict needs both.
+
+### Workaround in this repository
+
+`docs/src/assets/mermaid-pin.js`, registered through
+`Documenter.HTML(assets = ...)`, imports a pinned mermaid that predates
+the regression and runs it over the `.mermaid` divs that
+`DocumenterMermaid` emits. The broken `mermaid@11` import injected by
+`DocumenterMermaid` still fails in the console; it leaves the diagrams
+untouched, and mermaid marks what it renders with `data-processed`, so
+the two cannot render the same diagram twice. Delete the asset once
+`DocumenterMermaid` pins a working version.
+
+---
+
+## UB-009 — Documenter's KaTeX loader intermittently leaves every formula on the page as raw `\[...\]`
+
+- **Discovered in**: 2026-09-20, from a report that formulas on the
+  published [Worked Examples](https://s-celles.github.io/SymbolicUncertainties.jl/dev/worked-examples/)
+  page were displayed as LaTeX source.
+- **Status**: **open — worked around locally** by switching the
+  documentation to MathJax 3. Not yet filed against
+  [Documenter.jl](https://github.com/JuliaDocs/Documenter.jl).
+
+### Symptoms
+
+Intermittently — twice in six headless-Chromium loads of the same
+published page, and reproducibly enough that a reader hits it — no
+formula on the page is typeset, and each one is left on screen as its
+source:
+
+```
+\[ \begin{equation}
+\sqrt{\mathtt{{\sigma}V}^{2} ~ \left( \frac{1}{I} \right)^{2} + \mathtt{{\sigma}I}^{2} ~ \left( \frac{ - V}{I^{2}} \right)^{2}}
+\end{equation}
+ \]
+```
+
+with, in the console:
+
+```
+jQuery.Deferred exception: renderMathInElement is not a function
+Uncaught TypeError: renderMathInElement is not a function
+```
+
+It is all-or-nothing per page load: the failure is in loading the
+renderer, not in any particular formula. Every formula in the
+documentation parses cleanly when fed to KaTeX 0.16.8 directly,
+`\begin{equation}` included.
+
+### Cause
+
+`assets/documenter.js` declares KaTeX's `auto-render` contrib as a
+RequireJS module with a `shim`, but the file is a UMD bundle that calls
+`define(["katex"], factory)` — an *anonymous* define. RequireJS has to
+attribute an anonymous define to the script that is currently
+executing, and when that attribution loses the race the module value
+that reaches the callback is not the function. The shim declaration is
+ignored for a file that defines itself, so it does not rescue the
+outcome.
+
+### Workaround in this repository
+
+`docs/make.jl` sets `mathengine = Documenter.MathJax3(...)`. Documenter
+injects MathJax by appending a plain `<script>` element to the head, with
+no loader between the page and the renderer, so the race cannot happen.
+MathJax also renders the `\begin{equation}` wrapper that `Symbolics`
+puts around every `Num` it hands to Latexify. `tags = "none"` is set
+because Documenter's MathJax 3 default (`"ams"`) would put an equation
+number on every machine-generated expression in the documentation.
+
+---
+
 ## UB-008 — `Symbolics.simplify` overflows `Int64` on a `Rational` coefficient with a large denominator
 
 - **Discovered in**: post-M14 documentation build, on the gauge R&R

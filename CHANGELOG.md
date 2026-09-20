@@ -6,8 +6,39 @@ v1.1.0](https://keepachangelog.com/en/1.1.0/), and this project adheres
 to [Semantic Versioning 2.0.0](https://semver.org/).
 
 ## [Unreleased]
-n### Added
+
+### Added
 - **CausalGraphs.jl Integration**: `SymbolicUncertaintiesCausalGraphsExt` weak dependency extension providing `parse_measurement_model` (Scaffolding Mode) and `evaluate_measurement_model` (Full-Auto Mode) for generating uncertainty budgets directly from causal graphs/Ishikawa diagrams.
+
+### Fixed — the published documentation renders its formulas as mathematics
+
+Formulas on the documentation site were shown, intermittently and on
+whole pages at a time, as their own LaTeX source
+(`\[ \begin{equation} \sqrt{\mathtt{{\sigma}V}^{2} … \]`), and the
+measurement fragments the library itself produces were never valid
+LaTeX to begin with.
+
+- `Base.show(io, MIME"text/latex", m)` renders symbolic expressions
+  through `Latexify.jl` when it is loaded, so `u_c` reaches Jupyter,
+  Pluto and the documentation as `\sqrt{\frac{{\sigma}V^{2}}{I^{2}}}`
+  rather than as the Julia expression `sqrt((σV^2) / (I^2))` dropped
+  into math mode, where `sqrt` typesets as four italic letters.
+  Without `Latexify.jl` the fragment now falls back to LaTeX text
+  mode, escaped — unclever, but parseable.
+- `latex(m)` returns the bare `"<val> \pm <err>"` fragments its
+  contract specifies. It was interpolating two complete
+  `$$\begin{equation}…\end{equation}$$` documents into one line, which
+  no LaTeX engine accepts.
+- The documentation is built with MathJax 3 instead of KaTeX.
+  Documenter loads KaTeX's auto-render contrib through RequireJS,
+  which intermittently resolves the module to a non-function and
+  leaves every formula on the page as raw source
+  (`upstream-bugs.md` UB-009).
+- `docs/src/assets/mermaid-pin.js` pins the mermaid release used for
+  the Ishikawa diagram on the Causal Graphs page. The floating
+  `mermaid@11` tag that `DocumenterMermaid` imports has, since
+  11.17.0, handed itself to RequireJS and thrown before drawing
+  anything (`upstream-bugs.md` UB-010).
 
 ### Fixed — the budget no longer lists sources that carry no uncertainty
 

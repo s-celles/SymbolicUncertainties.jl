@@ -89,14 +89,23 @@ wrapping required. The plain-text `text/plain` display
 (`val ± err` in Unicode) is what every REPL and
 non-notebook consumer sees.
 
-The in-library formatter is intentionally minimal: for
-concrete numeric values it prints the `Float64` directly; for
-symbolic expressions it defers to `Base.string(expr)`. Users
-who need production-grade LaTeX for complex expressions should
-load [`Latexify.jl`](https://github.com/korsbo/Latexify.jl)
-and call `latexify` on the individual `m.val` / `m.err`
-fields. A dedicated `SymbolicUncertaintiesLatexifyExt` package
-extension may land in a later milestone.
+Concrete numeric values print as themselves. A symbolic
+expression is rendered by
+[`Latexify.jl`](https://github.com/korsbo/Latexify.jl) when it is
+loaded — `sqrt(σV^2)` becomes `\sqrt{\mathtt{{\sigma}V}^{2}}`
+— which is what the `SymbolicUncertaintiesLatexifyExt` extension
+adds, alongside [`latex`](@ref). Loading it is one line:
+
+```julia
+using Latexify   # upgrades every text/latex rendering
+```
+
+Without it, the expression falls back to LaTeX **text** mode:
+the same `V / I` the REPL shows, escaped and wrapped in
+`\text{…}`. That fallback is deliberately unclever, but it is
+valid LaTeX — the earlier fallback pasted the Julia expression
+into math mode, where `sqrt(x)` typesets as the product of four
+italic letters.
 
 ## Safety warnings (division-by-zero and `sqrt` / `log` domain)
 

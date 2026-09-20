@@ -16,46 +16,51 @@ function SymbolicUncertainties.parse_measurement_model(m)
     lines = String[]
     push!(lines, "using SymbolicUncertainties, Symbolics")
     push!(lines, "")
-    
+
     var_names = String[]
     meas_lines = String[]
     dict_lines = String[]
     push!(dict_lines, "dict = Dict(")
-    
+
     for input in m.inputs
         name = string(input.name)
         push!(var_names, name)
         push!(var_names, "u_$name")
-        
+
         meta = input.metadata
         val = get(meta, :value, 0.0)
         err = get(meta, :uncertainty, 0.1)
-        
+
         push!(meas_lines, "$(name)_meas = $name ± u_$name")
         push!(dict_lines, "    $name => $val, u_$name => $err,")
     end
     push!(dict_lines, ")")
-    
+
     if !isempty(var_names)
         push!(lines, "@variables " * join(var_names, " "))
     end
-    
+
     append!(lines, meas_lines)
-    
+
     push!(lines, "")
     out_name = string(m.output.name)
     push!(lines, "# Define your measurement equation here:")
-    push!(lines, "$out_name = " * join([string(n.name) * "_meas" for n in m.inputs], " + ") * " # <--- edit this")
-    
+    push!(
+        lines,
+        "$out_name = " *
+        join([string(n.name) * "_meas" for n in m.inputs], " + ") *
+        " # <--- edit this",
+    )
+
     push!(lines, "")
     push!(lines, "budget = uncertainty_budget($out_name)")
-    
+
     push!(lines, "")
     push!(lines, "# To evaluate numerically:")
     append!(lines, dict_lines)
     push!(lines, "SymbolicUncertainties.evaluate($out_name, dict)")
     push!(lines, "SymbolicUncertainties.evaluate(budget, dict)")
-    
+
     return join(lines, "\n")
 end
 
@@ -69,31 +74,35 @@ returns the computed `UncertaintyBudget` evaluated with the numerical metadata.
 function SymbolicUncertainties.evaluate_measurement_model(m)
     out_node = m.output
     out_meta = out_node.metadata
-    
+
     if !haskey(out_meta, :expr)
-        throw(ArgumentError("Full-Auto mode requires an `[:expr]` field in the output node metadata."))
+        throw(
+            ArgumentError(
+                "Full-Auto mode requires an `[:expr]` field in the output node metadata.",
+            ),
+        )
     end
-    
-    eval_env = Dict{Symbol, Any}()
-    dict = Dict{Num, Real}()
-    
+
+    eval_env = Dict{Symbol,Any}()
+    dict = Dict{Num,Real}()
+
     for input in m.inputs
         sym_name = Symbol(input.name)
         err_name = Symbol("u_", sym_name)
-        
+
         var_val = (@variables $sym_name)[1]
         var_err = (@variables $err_name)[1]
-        
+
         meta = input.metadata
         val = get(meta, :value, 0.0)
         err = get(meta, :uncertainty, 0.0)
-        
+
         dict[var_val] = val
         dict[var_err] = err
-        
+
         eval_env[sym_name] = var_val ± var_err
     end
-    
+
     eval_env[:+] = +
     eval_env[:-] = -
     eval_env[:*] = *
@@ -104,10 +113,10 @@ function SymbolicUncertainties.evaluate_measurement_model(m)
     eval_env[:exp] = exp
     eval_env[:log] = log
     eval_env[:sqrt] = sqrt
-    
+
     raw_expr = out_meta[:expr]
     parsed_expr = raw_expr isa String ? Meta.parse(raw_expr) : raw_expr
-    
+
     function eval_ast(ast)
         if ast isa Symbol
             return eval_env[ast]
@@ -121,10 +130,10 @@ function SymbolicUncertainties.evaluate_measurement_model(m)
             error("Unsupported AST node: $ast")
         end
     end
-    
+
     sym_meas = eval_ast(parsed_expr)
     budget = SymbolicUncertainties.uncertainty_budget(sym_meas)
-    
+
     return SymbolicUncertainties.evaluate(budget, dict)
 end
 

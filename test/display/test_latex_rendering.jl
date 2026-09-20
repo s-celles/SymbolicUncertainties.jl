@@ -61,3 +61,39 @@ end
     @test startswith(s, "\$")
     @test endswith(s, "\$")
 end
+
+@testitem "LaTeX: text-mode fallback escapes LaTeX specials" begin
+    using SymbolicUncertainties
+    using Symbolics
+
+    @variables x σx y σy
+    m = propagate((a, b) -> a * b, [x ± σx, y ± σy])
+
+    # Without a LaTeX backend the fragment is text mode, not bare
+    # Julia call syntax dropped into math mode.
+    frag = SymbolicUncertainties._latex_text_fallback(m.err)
+    @test startswith(frag, "\\text{")
+    @test endswith(frag, "}")
+    # `^` is a LaTeX special even inside \text{}: every one of them
+    # must have been escaped.
+    @test !occursin("^", replace(frag, "\\^{}" => ""))
+
+    esc = SymbolicUncertainties._escape_latex_text("a_1^2 & 50% {x} #y ~z \$q")
+    @test esc == "a\\_1\\^{}2 \\& 50\\% \\{x\\} \\#y \\~{}z \\\$q"
+end
+
+@testitem "LaTeX: no LaTeX backend leaves a parseable fragment" begin
+    using SymbolicUncertainties
+    using Symbolics
+
+    @variables x σx
+    m = x ± σx
+    io = IOBuffer()
+    show(io, MIME"text/latex"(), m)
+    s = String(take!(io))
+
+    # Either the Latexify extension rendered real math mode, or
+    # the text-mode fallback ran — never raw Julia syntax in math
+    # mode.
+    @test occursin("\\text{", s) || !occursin("(", s)
+end

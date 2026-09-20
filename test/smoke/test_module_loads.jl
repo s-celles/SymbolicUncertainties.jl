@@ -21,6 +21,10 @@
     #   M7: build_evaluator, to_expr, latex (stub),
     #       JuliaTarget, CTarget (re-exports)
     #   M9: propagate_ode, uncertainty_ode (stubs + MTK extension)
+    #       CausalGraphs: CauseNode, IntermediateNode,
+    #       MeasurementModel and the two entry points
+    #       parse_measurement_model / evaluate_measurement_model
+    #       (stubs + the CausalGraphs extension)
     @test Set(public) == Set([
         :SymbolicUncertainties,
         :SymbolicMeasurement,
@@ -66,6 +70,11 @@
         :uncertainty_ode,
         :monte_carlo,
         :MonteCarloComparison,
+        :CauseNode,
+        :IntermediateNode,
+        :MeasurementModel,
+        :parse_measurement_model,
+        :evaluate_measurement_model,
     ])
 end
 

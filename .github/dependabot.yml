@@ -1,0 +1,22 @@
+# Dependabot keeps the GitHub Actions used by CI.yml,
+# Documentation.yml and TagBot.yml on their current major releases.
+#
+# There is no `package-ecosystem` for Julia packages: `Project.toml`
+# `[compat]` bounds are raised by CompatHelper, not by Dependabot.
+version: 2
+
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # One pull request for the whole workflow directory rather than
+    # one per action — these are bumped together or not at all.
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore"
+    labels:
+      - "dependencies"

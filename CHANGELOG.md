@@ -8,6 +8,11 @@ to [Semantic Versioning 2.0.0](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `.github/workflows/CompatHelper.yml`: the `[compat]` bounds in
+  `Project.toml`, `docs/Project.toml` and `test/Project.toml` are now
+  raised daily by CompatHelper, one pull request per bump. `test` is
+  listed explicitly — it carries its own `[compat]` block, which
+  CompatHelper's default `["", "docs"]` would never visit.
 - `.github/dependabot.yml`: the GitHub Actions used by CI, the
   documentation build and TagBot are now kept current by Dependabot,
   grouped into one weekly pull request. Julia `[compat]` bounds stay

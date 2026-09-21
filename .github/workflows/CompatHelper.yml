@@ -1,0 +1,59 @@
+# CompatHelper raises the `[compat]` bounds in Project.toml when a
+# dependency publishes a new major release, and opens one pull request
+# per bump. Dependabot cannot do this: it has no Julia ecosystem, and
+# only keeps the GitHub Actions in this directory current
+# (.github/dependabot.yml).
+name: CompatHelper
+
+on:
+  schedule:
+    # Daily, 00:00 UTC.
+    - cron: "0 0 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  CompatHelper:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check if Julia is already available in the PATH
+        id: julia_in_path
+        run: which julia
+        continue-on-error: true
+      - name: Install Julia, but only if it is not already available
+        uses: julia-actions/setup-julia@v3
+        with:
+          version: "1"
+          arch: ${{ runner.arch }}
+        if: steps.julia_in_path.outcome != 'success'
+      - name: Add the General registry via Git
+        run: |
+          import Pkg
+          ENV["JULIA_PKG_SERVER"] = ""
+          Pkg.Registry.add("General")
+        shell: julia --color=yes {0}
+      - name: Install CompatHelper
+        run: |
+          import Pkg
+          name = "CompatHelper"
+          uuid = "aa819f21-2bde-4658-8897-bab36330d9b7"
+          version = "3"
+          Pkg.add(; name, uuid, version)
+        shell: julia --color=yes {0}
+      - name: Run CompatHelper
+        run: |
+          import CompatHelper
+          # `test` is listed alongside the default `["", "docs"]`:
+          # test/Project.toml carries its own [compat] block, and a
+          # bound nobody raises is a bound that silently pins.
+          CompatHelper.main(; subdirs = ["", "docs", "test"])
+        shell: julia --color=yes {0}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Lets CompatHelper's pull requests trigger CI, which a
+          # GITHUB_TOKEN-authored PR cannot do. Reuses the key TagBot
+          # already relies on.
+          COMPATHELPER_PRIV: ${{ secrets.DOCUMENTER_KEY }}

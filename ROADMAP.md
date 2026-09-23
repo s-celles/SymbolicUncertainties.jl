@@ -1255,3 +1255,20 @@ A killer feature for **Auditing and Quality Reporting (ISO 17025)**. Instead of 
 
 ### Impact
 This positions `SymbolicUncertainties.jl` not just as a computational engine, but as the first holistic tool capable of transforming a qualitative brainstorming session (Ishikawa) directly into a strict ISO/BIPM-compliant uncertainty budget, and vice versa (auto-documenting code into visual graphs).
+
+## Future Enhancements & Developer Experience (DX)
+
+### 1. Auto-assumptions Macro (e.g., `@measurements` or `@uncertainties`)
+To fully leverage the downstream architectural fixes in `Symbolics.jl` (metadata) and `SymbolicUtils.jl` (folding), `SymbolicUncertainties.jl` must declare its uncertainties with a strictly positive domain (`domain = v -> v > 0`).
+
+Currently, a user would need to manually write:
+```julia
+@variables x σx [domain = v -> v > 0]
+```
+To drastically improve DX and ensure strict JCGM 100:2008 compliance (preventing the negative partial derivatives bug, see #1045), we will introduce a domain-specific macro.
+
+**Proposed Implementation:**
+```julia
+@uncertainties x y
+```
+This macro will wrap `Symbolics.@variables`, auto-generating the nominal variables `x`, `y` (as reals) and injecting the exact required domain metadata for their uncertainties `σx`, `σy` under the hood. It makes the package both mathematically inviolable and effortless to use for metrologists.

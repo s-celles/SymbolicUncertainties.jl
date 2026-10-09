@@ -607,24 +607,51 @@ Fortran emission as a first-class deliverable, the M7
 - **Discovered in**: Milestone M4 (v0.4.0) design, during the
   `/speckit.clarify` clarification pass for the division-by-zero
   (REQ-140) and `sqrt`/`log` domain (REQ-141) safety warnings.
-- **Status**: **ecosystem gap, tracked upstream but dormant** —
+- **Status**: **ecosystem gap, now moving upstream** (was *dormant*;
+  updated 2026-10-09) —
   [JuliaSymbolics/Symbolics.jl#98 "Assumptions"](https://github.com/JuliaSymbolics/Symbolics.jl/issues/98),
-  open since 2021-03-07, four comments, **no activity since
-  2023-06-14**, unlabelled, no PR. It asks for exactly what is missing
-  here (`x1 ∈ Real ∩ Positive`). The maintainer's reply in 2021 —
+  open since 2021-03-07. It asks for exactly what is missing here
+  (`x1 ∈ Real ∩ Positive`). The maintainer's reply in 2021 —
   *"This isn't all implemented yet, so it might be good to use this
   issue to start talking design"* — proposes representing domains with
   `DomainSets.jl`, for consistency with the ModelingToolkit
   `PDESystem` work, carried on Symbolics' **metadata system**; issue
   #97 is cited there for SymPy's branch elimination under assumptions.
-  That design conversation never started. A user reopened the thread in
-  2023 asking for SymPy's `positive=true` and received no reply.
+  That design conversation stayed dead for five years: a user reopened
+  the thread in 2023 asking for SymPy's `positive=true` and received no
+  reply, and Symbolics' own parity checklist,
+  [#59 "Feature Completeness Against SymPy"](https://github.com/JuliaSymbolics/Symbolics.jl/issues/59),
+  does not list assumptions at all.
 
-  Symbolics' own parity checklist,
-  [#59 "Feature Completeness Against SymPy"](https://github.com/JuliaSymbolics/Symbolics.jl/issues/59)
-  — updated as recently as 2026-08-29 — does not list assumptions at
-  all, so the gap is not even tracked as a parity item. Nothing is
-  expected here in the short term.
+  It restarted on **2026-09-13**, when a comment on #98 laid out three
+  interlocking pull requests and the maintainer routed them to
+  @AayushSabharwal the same day:
+
+  | PR | What it does | State |
+  |----|--------------|-------|
+  | [SymbolicUtils#1077](https://github.com/JuliaSymbolics/SymbolicUtils.jl/pull/1077) | restricts `(x^a)^b` folding to integer `b`, so `sqrt(x^2)` no longer loses the absolute value | **merged** 2026-09-17, in v4.46.8 |
+  | [Symbolics#1983](https://github.com/JuliaSymbolics/Symbolics.jl/pull/1983) | adds the `VariableDomain` metadata key, storing a `DomainSets.jl` `Domain` — exactly the 2021 design | open, workflows awaiting maintainer approval |
+  | [Symbolics#1984](https://github.com/JuliaSymbolics/Symbolics.jl/pull/1984) | lets `symbolic_solve` return the domain constraints it currently only `@info`-logs | open, awaiting an API-shape decision |
+
+  Separately,
+  [SymbolicUtils#1046](https://github.com/JuliaSymbolics/SymbolicUtils.jl/issues/1046)
+  (no simplification rules for `abs`) was closed as completed by
+  [PR #1138](https://github.com/JuliaSymbolics/SymbolicUtils.jl/pull/1138)
+  and released in **v4.50.0** on 2026-10-09.
+
+  None of this closes UB-003 yet. #1983 supplies the *vocabulary* to
+  declare `u ∈ HalfLine()`, not a query API (`is_positive`) and not a
+  `simplify` pass that consults it, so the workaround below stands
+  either way; see [`_constant_square`](src/source.jl) and the note at
+  `src/source.jl`.
+
+  Measured on 2026-10-09 under Symbolics 7.45.0 and SymbolicUtils 4.50.0,
+  i.e. with the new `abs` rules in place: `simplify(sqrt(c^2*u^2))` still
+  returns `sqrt((c^2)*(u^2))` unreduced, because the `sqrt((~x)^2) => abs(~x)`
+  rule needs a single squared factor and the GUM variance shape is a product
+  of two. `simplify(sqrt(u^2))` does give `abs(u)`, but turning that into `u`
+  is exactly the step that needs `u >= 0`. The full suite passes 1349/1349 on
+  those versions, unchanged.
 
   `SymbolicUncertainties.jl` M4 works around it by requiring a concrete
   numeric `Real` in `.val` to mark an operand "provably safe"; all

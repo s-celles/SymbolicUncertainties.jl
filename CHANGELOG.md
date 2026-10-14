@@ -8,6 +8,15 @@ to [Semantic Versioning 2.0.0](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- `SECURITY.md`: a disclosure policy at the repository root. It states
+  the four trust boundaries where the library turns data into something
+  that runs or reaches outside the process — expressions that get
+  `eval`'d or compiled, the allowlisted interpreter behind
+  `parse_measurement_model`, the code `build_evaluator` emits, and the
+  out-of-process Giac CAS — and draws the line this project cares about
+  most: a wrong uncertainty is a bug to report in public, not a
+  vulnerability to report in private. Reports go through GitHub private
+  advisories, acknowledged within 7 days and assessed within 30.
 - `.github/workflows/CompatHelper.yml`: the `[compat]` bounds in
   `Project.toml`, `docs/Project.toml` and `test/Project.toml` are now
   raised daily by CompatHelper, one pull request per bump. `test` is

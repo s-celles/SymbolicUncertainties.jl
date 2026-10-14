@@ -87,6 +87,11 @@ Report it privately through GitHub's private vulnerability reporting, at
 <https://github.com/s-celles/SymbolicUncertainties.jl/security/advisories/new>.
 That opens a draft advisory visible only to you and the maintainer.
 
+There is deliberately no security mailing address: an advisory is the
+preferred channel, because it stays attached to the repository it
+concerns, carries its own history, and turns into the published CVE
+record without anything being copied by hand.
+
 Please include, as far as you can:
 
 - **Component** — the file or extension, and the function you called.

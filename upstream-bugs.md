@@ -728,6 +728,27 @@ Fortran emission as a first-class deliverable, the M7
   purely-symbolic `.val` expressions trigger the warning even when
   the user knows by context that the value is positive/nonzero.
 
+  **An attempt to pre-empt the upstream API was closed on 2026-10-15**
+  ([PR #1](https://github.com/s-celles/SymbolicUncertainties.jl/pull/1)).
+  It added `sqrt(x^2) => abs(x) => x` rewrites to `_simplify_for_report`,
+  guarded by `isdefined(Symbolics, :VariableDomain)`. Three reasons it
+  did not survive review, worth keeping because they apply to the next
+  attempt as much as to that one:
+
+  - its positivity test was `hasmetadata(v, VariableDomain)`, which
+    answers "does this variable carry a domain", not "is that domain
+    within the non-negative reals" — a variable declared on
+    `Interval(-1, 0)` would have had its `abs` removed;
+  - being guarded by `isdefined`, it was inert and untested here, and
+    would have switched itself on at whatever Symbolics release first
+    defines that symbol: a change of computed values triggered by a
+    dependency bump rather than by a commit;
+  - `_simplify_for_report` is documented as cosmetic and allowed to
+    swallow its failures, yet `src/type.jl` feeds its output into
+    `welch_satterthwaite` and `src/propagate_vector.jl` into the
+    reported standard uncertainty. A value-changing rewrite belongs
+    where the variance is built, not where it is displayed.
+
 ### Symptoms
 
 Giac.jl provides a full assumptions framework so a downstream

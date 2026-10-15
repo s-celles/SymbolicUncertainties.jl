@@ -1,0 +1,27 @@
+% Loaded by Documenter's LaTeX preamble, which already puts the title,
+% the version and the authors on the cover page and a table of contents
+% after it. This file adds the one thing REQ-304 asks for and Documenter
+% does not supply: the licence, at the foot of the cover page.
+%
+% `memoir` calls \maketitlehooka ... \maketitlehookd from inside
+% \maketitle; hook d runs last, so the notice lands under the author.
+% \providecommand first, in case a future memoir drops the hook.
+%
+% The string below is checked against the first line of LICENSE.md at
+% build time by docs/make_pdf.jl: if the two ever disagree, the build
+% fails rather than print a licence the repository does not carry.
+\providecommand{\DocLicence}{BSD 3-Clause License}
+\providecommand{\maketitlehookd}{}
+\renewcommand{\maketitlehookd}{%
+  \vfill
+  \begin{center}
+    \small
+    Licensed under the \DocLicence.\\
+    Generated from the package sources with Documenter.jl
+    on Julia \JuliaVersion.\\
+    This document describes an implementation of the methodology of
+    JCGM 100:2008.\\
+    It is not accredited calibration software; see the Limitations
+    chapter.
+  \end{center}
+}

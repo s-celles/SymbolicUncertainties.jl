@@ -34,7 +34,7 @@ R = SymbolicMeasurement(V, σV) / SymbolicMeasurement(I, σI)
 
 c = monte_carlo(
     R,
-    # Distributions.jl requiert des nombres sans dimension
+    # Distributions.jl requires dimensionless numbers
     Dict(
         V => Normal(5.0, 0.01),   # V
         I => Normal(0.1, 0.001)   # A
@@ -203,7 +203,7 @@ noise.
 ```@example mc
 adaptive = monte_carlo(
     R,
-    # Distributions.jl requiert des nombres sans dimension
+    # Distributions.jl requires dimensionless numbers
     Dict(
         V => Normal(5.0, 0.01),   # V
         I => Normal(0.1, 0.001)   # A
@@ -240,7 +240,7 @@ Xm = Rm * 2.0
 
 res = monte_carlo(
     [Rm, Xm],
-    # Distributions.jl requiert des nombres sans dimension
+    # Distributions.jl requires dimensionless numbers
     Dict(
         V => Normal(5.0, 0.01),   # V
         I => Normal(0.1, 0.001)   # A

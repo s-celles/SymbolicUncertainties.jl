@@ -266,6 +266,31 @@ Two separate calls would not do: they draw independent inputs and
 measure a correlation of zero by construction — the same defect as
 sampling correlated inputs independently, seen from the output side.
 
+## Repeating a run exactly
+
+A Monte Carlo verdict near the §8.2 boundary moves between runs, which
+is awkward for a figure, a doctest or a regression test. Pass a seeded
+generator and the draw is fixed:
+
+```@example mc
+using Random
+
+a = monte_carlo(R, Dict(V => Normal(5.0, 0.01), I => Normal(0.1, 0.001));
+                n = 20_000, rng = MersenneTwister(20261015))
+b = monte_carlo(R, Dict(V => Normal(5.0, 0.01), I => Normal(0.1, 0.001));
+                n = 20_000, rng = MersenneTwister(20261015))
+
+a.interval_mc == b.interval_mc
+```
+
+`rng` takes any `Random.AbstractRNG` and defaults to the global
+generator, so nothing changes for a caller that does not pass one. What
+it buys is independence: the run no longer depends on what else in the
+session has drawn from the global generator, which `Random.seed!`
+before the call could never guarantee. Every method takes it — the
+scalar one, the vector-valued one and the adaptive procedure, which
+consumes the generator block by block.
+
 ## What it never does
 
 A Monte Carlo run does not alter the symbolic result. It is a check on

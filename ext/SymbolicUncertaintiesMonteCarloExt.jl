@@ -15,12 +15,13 @@ module SymbolicUncertaintiesMonteCarloExt
 # `Distributions` as a second trigger keeps `Statistics` out of the
 # package's mandatory dependencies (REQ-130).
 #
-# Traces REQ-230, REQ-231, REQ-233, REQ-234.
+# Traces REQ-230, REQ-231, REQ-233, REQ-234, REQ-319.
 
 import SymbolicUncertainties
 import Symbolics
 import MonteCarloMeasurements
 import Distributions
+import Random
 
 const SU = SymbolicUncertainties
 const MCM = MonteCarloMeasurements
@@ -184,7 +185,10 @@ end
 # the caller has to supply, and JCGM 101 §6.4.8.4 says as much.
 #
 # Traces REQ-232.
-function _sample_inputs(ms, distributions, n)
+# `rng` is threaded through every draw rather than left to the global
+# generator, so a figure or a test can repeat a run exactly without
+# owning the whole session's randomness (REQ-319).
+function _sample_inputs(ms, distributions, n, rng)
     subs = Dict{Symbolics.Num,Any}()
     cov = _merged_cov(ms)
     terms = _merged_terms(ms)
@@ -201,7 +205,7 @@ function _sample_inputs(ms, distributions, n)
     for sid in live
         sid in correlated && continue
         d = distributions[findfirst_key(distributions, srcs[sid].variable)]
-        subs[srcs[sid].variable] = MCM.Particles(n, d)
+        subs[srcs[sid].variable] = MCM.Particles(rng, n, d)
     end
     isempty(correlated) && return subs
 
@@ -249,7 +253,7 @@ function _sample_inputs(ms, distributions, n)
             "each other (JCGM 100:2008 §5.2.2, JCGM 101:2008 §6.4.8).",
         ),
     )
-    z = [MCM.Particles(n, Distributions.Normal(0.0, 1.0)) for _ in 1:k]
+    z = [MCM.Particles(rng, n, Distributions.Normal(0.0, 1.0)) for _ in 1:k]
     for i in 1:k
         v = srcs[ids[i]].variable
         acc = Float64(Distributions.mean(ds[i]))
@@ -269,6 +273,7 @@ function SymbolicUncertainties.monte_carlo(
     ndig::Int = 2,
     adaptive::Bool = false,
     max_blocks::Int = 100,
+    rng::Random.AbstractRNG = Random.default_rng(),
 )
     _check_spec(m, distributions)
     adaptive && return _adaptive(
@@ -278,13 +283,14 @@ function SymbolicUncertainties.monte_carlo(
         coverage_probability,
         ndig,
         max_blocks,
+        rng,
     )
 
     # Sample each input, then evaluate the nonlinear model on the
     # samples. `Particles` carries the whole distribution through the
     # arithmetic, so this is the model's own response, not a
     # linearisation of it.
-    subs = _sample_inputs(m, distributions, n)
+    subs = _sample_inputs(m, distributions, n, rng)
     sampled = Symbolics.substitute(m.val, subs)
     out = Symbolics.value(sampled)
     out isa MCM.Particles || (out = eval(Symbolics.toexpr(out)))
@@ -308,8 +314,8 @@ end
 # intervals, and it is their endpoints that carry the quantile noise.
 #
 # Traces REQ-237.
-function _block(m, distributions, block, α)
-    subs = _sample_inputs(m, distributions, block)
+function _block(m, distributions, block, α, rng)
+    subs = _sample_inputs(m, distributions, block, rng)
     sampled = Symbolics.substitute(m.val, subs)
     out = Symbolics.value(sampled)
     out isa MCM.Particles || (out = eval(Symbolics.toexpr(out)))
@@ -337,6 +343,7 @@ function _adaptive(
     coverage_probability,
     ndig,
     max_blocks,
+    rng,
 )
     vals = _gum_values(m, distributions)
     estimate_gum = _as_float(m.val, vals)
@@ -351,7 +358,7 @@ function _adaptive(
     converged = false
 
     while length(ys) < max_blocks
-        y, u, lo, hi = _block(m, distributions, block, α)
+        y, u, lo, hi = _block(m, distributions, block, α, rng)
         push!(ys, y)
         push!(us, u)
         push!(los, lo)
@@ -502,6 +509,7 @@ function SymbolicUncertainties.monte_carlo(
     coverage_probability::Float64 = 0.95,
     ndig::Int = 2,
     adaptive::Bool = false,
+    rng::Random.AbstractRNG = Random.default_rng(),
 )
     adaptive && throw(
         ArgumentError(
@@ -518,7 +526,7 @@ function SymbolicUncertainties.monte_carlo(
     )
     _check_spec(ms, distributions)
 
-    subs = _sample_inputs(ms, distributions, n)
+    subs = _sample_inputs(ms, distributions, n, rng)
     vals = _gum_values(ms, distributions)
 
     outs = map(ms) do m

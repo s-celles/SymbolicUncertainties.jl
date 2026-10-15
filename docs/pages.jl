@@ -22,4 +22,5 @@ pages = [
     "Power & Resistance Metrology" => "power-resistance-metrology.md",
     "Methodology Reference" => "methodology-reference.md",
     "Limitations" => "limitations.md",
+    "Offline Documentation" => "offline-documentation.md",
 ]

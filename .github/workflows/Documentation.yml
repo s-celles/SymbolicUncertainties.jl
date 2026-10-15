@@ -36,9 +36,28 @@ jobs:
             Pkg.develop(PackageSpec(path = pwd()))
             Pkg.instantiate()
           '
+      - name: Regenerate the figures (REQ-310a)
+        run: |
+          julia --project=docs docs/figures/make_figures.jl
       - name: Build and deploy (warning-free)
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DOCUMENTER_KEY: ${{ secrets.DOCUMENTER_KEY }}
         run: |
           julia --project=docs docs/make.jl
+      - name: Install the PDF prerequisites
+        # Tectonic comes from tectonic_jll, but two things it shells out
+        # to come from the machine: the DejaVu fonts documenter.sty asks
+        # fontspec for, and the pygmentize that minted calls.
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            fonts-dejavu-core python3-pygments
+      - name: Build one PDF per audience (REQ-300)
+        run: |
+          julia --project=docs docs/make_pdf.jl
+      - uses: actions/upload-artifact@v4
+        with:
+          name: offline-documentation
+          path: docs/build/pdf/*.pdf
+          if-no-files-found: error

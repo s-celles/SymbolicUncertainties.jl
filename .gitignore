@@ -32,6 +32,7 @@
 
 # Core project files
 !Project.toml
+!justfile
 !.github/
 !.github/**
 !.codecov.yml

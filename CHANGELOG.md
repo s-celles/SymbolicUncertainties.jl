@@ -8,6 +8,44 @@ to [Semantic Versioning 2.0.0](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **Offline documentation deliverables (M15, EARS series 300)**: the
+  documentation now builds a second deliverable beside the HTML site —
+  one PDF per audience, for the metrologist attaching a method
+  description to a calibration file, the integrator on a network with no
+  route out, and the reviewer working from paper.
+  - `docs/audiences.jl` holds the three page lists as data, and refuses
+    to build an audience that omits the Limitations chapter: a PDF is
+    detached from its context the moment it is attached to a calibration
+    file, so the assumptions and the liability notice travel with it.
+  - `docs/make_pdf.jl` compiles with Tectonic from `tectonic_jll`, so a
+    PDF needs no system LaTeX, no `latexmk` and no Docker. The cover
+    page carries the version read from `Project.toml`, the authors and
+    the licence — and the build compares the licence printed on the
+    cover against the first line of `LICENSE.md`, rather than letting
+    the two drift apart silently.
+  - `docs/figures/make_figures.jl` generates every figure from fixtures
+    in `docs/figures/fixtures.jl`, each one computed by the package
+    itself. `just figures-reproducible` regenerates them and fails if
+    the working tree moves, which is what makes a figure evidence
+    rather than decoration. Nothing is reproduced from JCGM 100:2008 or
+    any other standard. Five figures join the pages they belong to: the
+    variance Pareto on Uncertainty Budget, the swept sensitivity
+    coefficients on Sensitivity Analysis, the two coverage intervals on
+    Monte Carlo Cross-Validation, the nonlinearity indicator on
+    Linearity Check and the coverage factor on Expanded Uncertainty.
+  - `SYMBOLICUNCERTAINTIES_TECTONIC` names a tectonic of the host's own
+    when the artefact's binary cannot be executed there, as on a
+    distribution that refuses generic-Linux dynamic linking. Set to a
+    path that is not a file, the build fails rather than falling back
+    without saying so.
+  - `justfile`: the project's entry points, which the contribution
+    guide asked for and the repository did not have — `just test`,
+    `just figures`, `just docs`, `just pdf`, `just check`.
+  - The landing page and the Causal Graphs page appear in no PDF, by
+    decision: the first is a layout rather than content, and the
+    second's Mermaid diagram is rendered by JavaScript in a browser. A
+    PDF with a hole where a diagram belongs is worse than one chapter
+    short.
 - `SECURITY.md`: a disclosure policy at the repository root. It states
   the four trust boundaries where the library turns data into something
   that runs or reaches outside the process — expressions that get

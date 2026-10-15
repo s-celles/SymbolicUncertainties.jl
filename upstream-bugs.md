@@ -17,6 +17,76 @@ top.
 
 ---
 
+## UB-011 — Symbolics' `text/latex` output is invalid LaTeX: `$$` wrapped around a `\begin{equation}`
+
+- **Discovered in**: 2026-10-15, building the audience PDFs of M15.
+  The LaTeX build stops on
+  `LaTeX Error: Bad math environment delimiter`, while the same page
+  renders correctly on the HTML site.
+- **Status**: **open — worked around locally**. Not yet filed; the
+  report belongs to
+  [Symbolics.jl](https://github.com/JuliaSymbolics/Symbolics.jl).
+
+### What happens
+
+Showing a `Num` as `text/latex` gives:
+
+```
+$$ \begin{equation}
+\frac{V}{I}
+\end{equation}
+ $$
+```
+
+Two wrappers, one inside the other: Symbolics adds the `$$ … $$`, and
+Latexify's default environment adds the `\begin{equation}`. An
+`equation` environment is display math already and cannot appear inside
+`$$`, so the result is not valid LaTeX.
+
+Nothing complains in a browser, because MathJax accepts it. Documenter's
+`LaTeXWriter` writes a `text/latex` MIME straight into the document, so
+every `@example` block whose value is a symbolic expression becomes a
+LaTeX error — which is why this surfaced only when a PDF was first
+built, two milestones after the HTML site was green.
+
+### The same defect inside a table
+
+The outer `$$` is Symbolics' own, and display math is illegal inside a
+table cell. A budget rendered `as = :dataframe` is a `tabular` built out
+of exactly those cells, so the integrator guide stopped on
+`LaTeX Error: \mathtt allowed only in math mode` — the same wrapper,
+a different symptom.
+
+### Workaround
+
+`docs/make_pdf.jl` asks Latexify for the bare expression and replaces
+the `text/latex` method for the duration of the build:
+
+```julia
+Latexify.set_default(env = :raw)
+
+Base.show(io::IO, ::MIME"text/latex", x::Symbolics.Num) =
+    print(io, "\$\\displaystyle ", Latexify.latexify(x; env = :raw), "\$")
+```
+
+Inline math set in `\displaystyle` reads like display math and is legal
+in a cell as in a paragraph. Replacing another package's method belongs
+in a build script and nowhere else; nothing in the library changes.
+
+### Proposed fix
+
+Symbolics should not wrap Latexify output that already carries its own
+environment — either emit `env = :raw` itself before adding `$$`, or
+emit the `equation` environment without the `$$`. Either produces valid
+LaTeX; the present combination never does.
+
+### References
+
+- EARS REQ-300 – REQ-318 (offline documentation deliverables)
+- `docs/make_pdf.jl`, where the workaround is applied
+
+---
+
 ## UB-010 — `mermaid` 11.17 registers itself with RequireJS and no diagram renders on a Documenter site
 
 - **Discovered in**: 2026-09-20, while auditing the published

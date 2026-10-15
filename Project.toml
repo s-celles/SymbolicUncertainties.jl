@@ -6,6 +6,7 @@ authors = ["Sébastien Celles <s.celles@gmail.com>"]
 [deps]
 PrecompileTools = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Symbolics = "0c5d862f-8b57-4792-8d23-62f2024744c7"
 
 [weakdeps]
@@ -35,6 +36,7 @@ DataFrames = "1"
 Distributions = "0.25"
 DynamicQuantities = "1"
 Giac = "0.11, 0.14"
+Random = "1"
 Latexify = "0.16"
 Measurements = "2"
 ModelingToolkit = "11"

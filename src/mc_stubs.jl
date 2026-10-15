@@ -108,7 +108,12 @@ the choice changes the answer. Defaulting to normal would also make
 the validation circular, since a run that assumes normality cannot
 detect that normality was the wrong assumption.
 
-Traces REQ-230, REQ-231.
+`rng` takes any `Random.AbstractRNG` and defaults to the global
+generator. Passing a seeded one makes a run repeat exactly without
+seeding the whole session, which is what a figure or a regression test
+needs (REQ-319).
+
+Traces REQ-230, REQ-231, REQ-319.
 """
 function monte_carlo(args...; kwargs...)
     throw(

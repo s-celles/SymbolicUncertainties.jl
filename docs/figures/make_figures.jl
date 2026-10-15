@@ -23,9 +23,9 @@ include(joinpath(@__DIR__, "fixtures.jl"))
 const OUT = joinpath(@__DIR__, "..", "src", "assets", "figures")
 const PX_PER_UNIT = 4
 
-# Seeded once, for the one figure that draws at random (REQ-309,
-# REQ-317): `monte_carlo` has no `rng` argument, so the global
-# generator is the only seam there is.
+# The seed of the one figure that draws at random (REQ-309). It goes
+# into `monte_carlo`'s own `rng` (REQ-319), so this figure does not
+# depend on the state of the session that builds it.
 const SEED = 20261014
 
 CairoMakie.activate!(type = "png")
@@ -138,11 +138,11 @@ end
 # (REQ-318), so this draws the intervals.
 function figure_gum_vs_montecarlo()
     fx = ohms_law()
-    Random.seed!(SEED)
     c = monte_carlo(
         fx.measurement,
         Dict(fx.Vsym => Normal(5.0, 0.01), fx.Isym => Normal(0.1, 0.001));
         n = 200_000,
+        rng = MersenneTwister(SEED),
     )
 
     los = [c.interval_gum[1], c.interval_mc[1]]

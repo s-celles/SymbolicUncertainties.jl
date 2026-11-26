@@ -120,10 +120,13 @@ different ways in two deliverables is a defect waiting to happen. They
 are rendered at four times the figure's own units, which keeps a
 full-width figure above 300 dpi in the PDF.
 
-## Reproducibility, and its one weak point
+## Reproducibility
 
-The Monte Carlo figure draws at random. `monte_carlo` takes no `rng` or
-`seed` argument, so the generator seeds the global generator before
-calling it, which holds exactly as long as the sampling uses the default
-one. A keyword argument on `monte_carlo` is the durable fix; until then,
-that figure's reproducibility rests on a global.
+The Monte Carlo figure draws at random, and it is the one figure whose
+reproducibility had to be argued rather than stated: the generator used
+to seed the global generator before the call, which holds only as long
+as nothing else draws from it.
+
+`monte_carlo` now takes an `rng` keyword, so the figure passes its own
+seeded generator and no longer depends on the state of the session it
+runs in. Every other figure is a deterministic computation.

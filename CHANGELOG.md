@@ -8,6 +8,16 @@ to [Semantic Versioning 2.0.0](https://semver.org/).
 ## [Unreleased]
 
 ### Added
+- **`monte_carlo` takes an `rng`**: every method — scalar,
+  vector-valued and the adaptive §7.9 procedure — accepts any
+  `Random.AbstractRNG` and draws every sample from it, defaulting to
+  the global generator so nothing changes for existing callers. Two
+  runs given equally seeded generators return the same estimate,
+  standard uncertainty and coverage interval whatever else the session
+  has drawn in between. `Random.seed!` before the call could not
+  promise that, which is why the Monte Carlo figure of the
+  documentation used to carry a caveat; it now passes its own
+  generator and the caveat is gone (REQ-319, closing REQ-317).
 - **Offline documentation deliverables (M15, EARS series 300)**: the
   documentation now builds a second deliverable beside the HTML site —
   one PDF per audience, for the metrologist attaching a method

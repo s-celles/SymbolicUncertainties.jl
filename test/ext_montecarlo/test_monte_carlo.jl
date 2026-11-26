@@ -292,3 +292,128 @@ end
     @test occursin("multivariate normal", msg)
     @test occursin("§6.4.8", msg)
 end
+
+@testitem "REQ-319: a seeded rng makes a run repeat exactly" begin
+    using SymbolicUncertainties
+    using Symbolics
+    using MonteCarloMeasurements
+    using Distributions
+    using Random
+    using Test
+
+    @variables V σV I σI
+    R = SymbolicMeasurement(V, σV) / SymbolicMeasurement(I, σI)
+    spec = Dict(V => Normal(5.0, 0.01), I => Normal(0.1, 0.001))
+
+    a = monte_carlo(R, spec; n = 20_000, rng = MersenneTwister(20261015))
+    b = monte_carlo(R, spec; n = 20_000, rng = MersenneTwister(20261015))
+
+    # Same generator, same state, same draw: the whole comparison has
+    # to come back identical, endpoints included.
+    @test a.estimate_mc == b.estimate_mc
+    @test a.u_mc == b.u_mc
+    @test a.interval_mc == b.interval_mc
+end
+
+@testitem "REQ-319: an rng run does not depend on the global generator" begin
+    using SymbolicUncertainties
+    using Symbolics
+    using MonteCarloMeasurements
+    using Distributions
+    using Random
+    using Test
+
+    @variables V σV I σI
+    R = SymbolicMeasurement(V, σV) / SymbolicMeasurement(I, σI)
+    spec = Dict(V => Normal(5.0, 0.01), I => Normal(0.1, 0.001))
+
+    # The point of the keyword: a figure or a test stays reproducible
+    # even when something else in the session has moved the global
+    # generator on.
+    Random.seed!(1)
+    a = monte_carlo(R, spec; n = 20_000, rng = MersenneTwister(7))
+    Random.seed!(999_999)
+    b = monte_carlo(R, spec; n = 20_000, rng = MersenneTwister(7))
+
+    @test a.interval_mc == b.interval_mc
+    @test a.estimate_mc == b.estimate_mc
+end
+
+@testitem "REQ-319: the vector-valued cross-check takes an rng too" begin
+    using SymbolicUncertainties
+    using Symbolics
+    using MonteCarloMeasurements
+    using Distributions
+    using Random
+    using Test
+
+    @variables V σV I σI
+    Rm = SymbolicMeasurement(V, σV) / SymbolicMeasurement(I, σI)
+    Xm = Rm * 2.0
+    spec = Dict(V => Normal(5.0, 0.01), I => Normal(0.1, 0.001))
+
+    a = monte_carlo([Rm, Xm], spec; n = 10_000, rng = MersenneTwister(11))
+    b = monte_carlo([Rm, Xm], spec; n = 10_000, rng = MersenneTwister(11))
+
+    @test a.per_output[1].interval_mc == b.per_output[1].interval_mc
+    @test a.per_output[2].interval_mc == b.per_output[2].interval_mc
+    @test a.correlation_mc == b.correlation_mc
+end
+
+@testitem "REQ-319: the adaptive procedure takes an rng too" begin
+    using SymbolicUncertainties
+    using Symbolics
+    using MonteCarloMeasurements
+    using Distributions
+    using Random
+    using Test
+
+    @variables V σV I σI
+    R = SymbolicMeasurement(V, σV) / SymbolicMeasurement(I, σI)
+    spec = Dict(V => Normal(5.0, 0.01), I => Normal(0.1, 0.001))
+
+    # §7.9 draws blocks until stabilisation, so it consumes the
+    # generator repeatedly; the result has to be reproducible all the
+    # same.
+    a = monte_carlo(
+        R,
+        spec;
+        n = 10_000,
+        adaptive = true,
+        max_blocks = 5,
+        rng = MersenneTwister(3),
+    )
+    b = monte_carlo(
+        R,
+        spec;
+        n = 10_000,
+        adaptive = true,
+        max_blocks = 5,
+        rng = MersenneTwister(3),
+    )
+
+    @test a.blocks == b.blocks
+    @test a.interval_mc == b.interval_mc
+end
+
+@testitem "REQ-319: without an rng the global generator is still used" begin
+    using SymbolicUncertainties
+    using Symbolics
+    using MonteCarloMeasurements
+    using Distributions
+    using Random
+    using Test
+
+    @variables V σV I σI
+    R = SymbolicMeasurement(V, σV) / SymbolicMeasurement(I, σI)
+    spec = Dict(V => Normal(5.0, 0.01), I => Normal(0.1, 0.001))
+
+    # The keyword is an addition, not a change: seeding globally has to
+    # keep working, because that is what every existing caller does.
+    Random.seed!(4242)
+    a = monte_carlo(R, spec; n = 20_000)
+    Random.seed!(4242)
+    b = monte_carlo(R, spec; n = 20_000)
+
+    @test a.interval_mc == b.interval_mc
+end
